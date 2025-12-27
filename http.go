@@ -24,10 +24,11 @@ func (here *HereServer) httpServerStart() {
 func (here *HereServer) onHTTPConnection(w http.ResponseWriter, r *http.Request) {
 	host := strings.ToLower(strings.TrimSpace(r.Host))
 	host = strings.TrimSuffix(host, ".")
-	host = strings.TrimSuffix(host, here.getHostSuffix())
 	if i := strings.IndexByte(host, ':'); i >= 0 {
 		host = host[:i]
 	}
+
+	host = strings.TrimSuffix(host, here.getHostSuffix())
 
 	here.mappingsMu.RLock()
 	mapping, isExist := here.mappings[host]
