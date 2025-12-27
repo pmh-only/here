@@ -6,7 +6,7 @@ A lightweight, self-hosted reverse tunnel service that exposes your local servic
 
 - **SSH-Based Tunneling**: Secure connections using standard SSH protocol with remote port forwarding
 - **HTTP Reverse Proxy**: Routes incoming HTTP requests through SSH tunnels to your local services
-- **UUID-Based Routing**: Each tunnel gets a unique identifier for clean URL management
+- **ID-Based Routing**: Each tunnel gets a unique identifier for clean URL management
 - **Concurrent Sessions**: Support multiple tunnels and clients simultaneously
 - **Thread-Safe**: Protected against race conditions with proper synchronization
 - **Graceful Shutdown**: Clean resource cleanup on termination
@@ -17,16 +17,16 @@ A lightweight, self-hosted reverse tunnel service that exposes your local servic
 ## How It Works
 
 1. Client connects via SSH with remote port forwarding: `-R1:localhost:PORT`
-2. Server generates a unique UUID for the forwarded port
-3. HTTP requests to `{UUID}.yourdomain.com` are proxied through the SSH tunnel
+2. Server generates a unique id for the forwarded port
+3. HTTP requests to `{id}.yourdomain.com` are proxied through the SSH tunnel
 4. Your local service receives the request and responds
 5. Response flows back through the tunnel to the original client
 
 ```
 Internet Client → HTTP Server (Port 8080) → SSH Tunnel → Your Local Service
                        ↓
-              UUID-based routing
-              (abc-123-def.yourdomain.com)
+              id-based routing
+              (abcdef.yourdomain.com)
 ```
 
 ## Installation
@@ -54,7 +54,7 @@ mkdir -p data
 export DATA_PATH="./data"
 export SSH_LISTEN_ADDR=":2222"
 export HTTP_LISTEN_ADDR=":8080"
-export HTTP_HOST_SURFFIX=".yourdomain.com"
+export HTTP_HOST_SUFFIX=".yourdomain.com"
 export SSH_PASSWORD="your-password"  # Optional: enable authentication
 export UNAUTHENTICATED_TIMEOUT="30m"  # Optional: default is 30m
 
@@ -82,7 +82,7 @@ ssh -R1:localhost:3000 yourdomain.com -p 2222
 # Anonymous mode selected
 #
 # You requested 1 service(s):
-# #0 (-R1) -> abc-123-def-456-789.yourdomain.com
+# #0 (-R1) -> abcdef.yourdomain.com
 #
 # Note: Anonymous session will timeout after 30m
 # Press Ctrl+C or Ctrl+D to exit
@@ -94,15 +94,16 @@ ssh -R1:localhost:3000 yourdomain.com -p 2222
 # Authentication successful!
 #
 # You requested 1 service(s):
-# #0 (-R1) -> abc-123-def-456-789.yourdomain.com
+# #0 (-R1) -> abcdef.yourdomain.com
 #
 # Authenticated session - no timeout
 # Press Ctrl+C or Ctrl+D to exit
 ```
 
-Your service is now accessible at: `http://abc-123-def-456-789.yourdomain.com:8080`
+Your service is now accessible at: `http://abcdef.yourdomain.com:8080`
 
 **Important Notes**:
+
 - **Colorized Interface**: The prompts use ANSI colors for better readability:
   - 🎨 Cyan for headers and prompts
   - ✅ Green for success messages
@@ -261,10 +262,12 @@ export SSH_PASSWORD="your-secure-password"
 **How It Works**:
 
 When `SSH_PASSWORD` is configured, users are presented with two options:
+
 1. **Anonymous Mode**: No password required, but session expires after configured timeout (default 30 minutes)
 2. **Login Mode**: Requires password authentication, provides unlimited session duration
 
 This gives users flexibility:
+
 - **Quick testing**: Use anonymous mode for temporary tunnels
 - **Production services**: Use login mode for long-running services
 
@@ -291,6 +294,7 @@ HereServer implements automatic session timeout to protect against abandoned con
 - **Configurable**: Set `UNAUTHENTICATED_TIMEOUT` environment variable (e.g., `15m`, `1h`, `2h30m`)
 
 **Benefits**:
+
 - Prevents resource exhaustion from forgotten or abandoned tunnels
 - Encourages authentication for long-running services
 - Automatic cleanup reduces memory usage
@@ -344,15 +348,15 @@ export SSH_PASSWORD="$(openssl rand -base64 32)"
 
 - **SSH Server** (port 2222): Accepts SSH connections with remote port forwarding
 - **HTTP Server** (port 8080): Reverse proxy that routes requests through tunnels
-- **Mapping Registry**: Thread-safe map of UUIDs to SSH connections
+- **Mapping Registry**: Thread-safe map of ids to SSH connections
 - **Tunnel Manager**: Handles SSH channel creation and cleanup
 
 ### Request Flow
 
 ```
-1. HTTP Request arrives at http://abc-123-def.yourdomain.com:8080
-2. Server extracts UUID (abc-123-def) from Host header
-3. Looks up SSH connection associated with UUID
+1. HTTP Request arrives at http://abcdef.yourdomain.com:8080
+2. Server extracts id (abcdef) from Host header
+3. Looks up SSH connection associated withid
 4. Opens "forwarded-tcpip" channel through SSH tunnel
 5. Proxies HTTP request through channel to client's local service
 6. Response flows back through same channel
@@ -377,7 +381,7 @@ ss -tln | grep -E '2222|8080'
 # Verify SSH connection
 ssh -v -R1:localhost:3000 user@server -p 2222
 
-# Check server logs for UUID
+# Check server logs forid
 journalctl -u here -n 50
 ```
 
@@ -385,7 +389,7 @@ journalctl -u here -n 50
 
 ```bash
 # Test wildcard DNS
-nslookup abc-123-def.tunnel.example.com
+nslookup abcdef.tunnel.example.com
 
 # Should return your server IP
 ```
@@ -415,6 +419,7 @@ autossh -M 0 -o "ServerAliveInterval 60" -R1:localhost:3000 user@server -p 2222
 ```
 
 Check server logs for timeout messages:
+
 ```bash
 journalctl -u here -f | grep -i timeout
 ```
@@ -436,6 +441,7 @@ If you're getting "Authentication failed" immediately:
 **Enter key not working**: The server accepts both `\r` (carriage return) and `\n` (newline) as Enter, which should work with all SSH clients and operating systems.
 
 **Cancelling/Exiting**:
+
 - Press **Ctrl+C** to interrupt and cancel at any time (during input prompts or active tunnel)
 - Press **Ctrl+D** to terminate the session at any time
 - Both will display `^C` or `^D` and exit gracefully
@@ -494,4 +500,3 @@ Built with:
 
 - [gliderlabs/ssh](https://github.com/gliderlabs/ssh) - SSH server library
 - [golang.org/x/crypto/ssh](https://golang.org/x/crypto/ssh) - SSH protocol implementation
-- [google/uuid](https://github.com/google/uuid) - UUID generation

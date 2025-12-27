@@ -14,7 +14,7 @@ func (here *HereServer) getHTTPAddr() string {
 }
 
 func (here *HereServer) getHostSuffix() string {
-	addr, ok := os.LookupEnv("HTTP_HOST_SURFFIX")
+	addr, ok := os.LookupEnv("HTTP_HOST_SUFFIX")
 	if !ok {
 		return ".local"
 	}
