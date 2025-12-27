@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/gliderlabs/ssh"
-	"github.com/google/uuid"
 	gossh "golang.org/x/crypto/ssh"
 )
 
@@ -93,7 +92,7 @@ func (here *HereServer) onSSHForwardRequest(ctx ssh.Context, srv *ssh.Server, re
 
 // displayWelcomeBanner shows the welcome message
 func displayWelcomeBanner(s ssh.Session) {
-	io.WriteString(s, fmt.Sprintf("%s%s╔═══════════════════════════════╗%s\n", colorBold, colorCyan, colorReset))
+	io.WriteString(s, fmt.Sprintf("\n%s%s╔═══════════════════════════════╗%s\n", colorBold, colorCyan, colorReset))
 	io.WriteString(s, fmt.Sprintf("%s%s║   Welcome to HereServer!      ║%s\n", colorBold, colorCyan, colorReset))
 	io.WriteString(s, fmt.Sprintf("%s%s╚═══════════════════════════════╝%s\n\n", colorBold, colorCyan, colorReset))
 }
@@ -158,7 +157,7 @@ func (here *HereServer) authenticateUser(s ssh.Session) (bool, error) {
 
 // displayServiceInfo shows the registered tunnels
 func (here *HereServer) displayServiceInfo(s ssh.Session, ids []string, channels []OverrideModel) {
-	io.WriteString(s, fmt.Sprintf("\n%s%sYou requested %d service(s):%s\n",
+	io.WriteString(s, fmt.Sprintf("%s%sYou requested %d service(s):%s\n",
 		colorBold, colorMagenta, len(channels), colorReset))
 
 	for i, channel := range channels {
@@ -205,7 +204,7 @@ func monitorInput(s ssh.Session) <-chan error {
 func (here *HereServer) handleSessionTimeout(s ssh.Session, authenticated bool, inputDone <-chan error) {
 	if !authenticated {
 		timeoutDuration := here.getUnauthenticatedTimeout()
-		writeInfo(s, "⏱", fmt.Sprintf("Note: Anonymous session will timeout after %s%v%s",
+		writeInfo(s, "\n⏱", fmt.Sprintf("Note: Anonymous session will timeout after %s%v%s",
 			colorBold, timeoutDuration, colorReset))
 		io.WriteString(s, colorize(colorCyan, "⌨  Press Ctrl+C or Ctrl+D to exit")+"\n")
 		log.Printf("Anonymous session from %s will timeout after %v", s.RemoteAddr(), timeoutDuration)
@@ -296,21 +295,15 @@ func (here *HereServer) registerForwards(ctx ssh.Context, remoteForwardChannels 
 	ids := []string{}
 
 	for _, remoteForwardChannels := range remoteForwardChannels {
-		id, err := uuid.NewV7()
-		if err != nil {
-			log.Printf("Failed to generate UUID: %v", err)
-			continue
-		}
-
-		idString := id.String()
+		id := randStringRunes(10)
 		if remoteForwardChannels.Override.DestAddr != "localhost" {
-			idString = remoteForwardChannels.Override.DestAddr
+			id = remoteForwardChannels.Override.DestAddr
 		}
 
-		ids = append(ids, idString)
+		ids = append(ids, id)
 
 		here.mappingsMu.Lock()
-		here.mappings[idString] = MappingModel{
+		here.mappings[id] = MappingModel{
 			conn,
 			remoteForwardChannels.Override,
 		}
