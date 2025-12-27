@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -19,6 +20,34 @@ func (here *HereServer) getSSHAddr() string {
 	}
 
 	return addr
+}
+
+func (here *HereServer) getSSHPassword() string {
+	password, ok := os.LookupEnv("SSH_PASSWORD")
+	if !ok {
+		return ""
+	}
+
+	return password
+}
+
+func (here *HereServer) isPasswordRequired() bool {
+	return here.getSSHPassword() != ""
+}
+
+func (here *HereServer) getUnauthenticatedTimeout() time.Duration {
+	timeoutStr, ok := os.LookupEnv("UNAUTHENTICATED_TIMEOUT")
+	if !ok {
+		return 30 * time.Minute // Default: 30 minutes
+	}
+
+	timeout, err := time.ParseDuration(timeoutStr)
+	if err != nil {
+		log.Printf("Invalid UNAUTHENTICATED_TIMEOUT value '%s', using default 30m: %v", timeoutStr, err)
+		return 30 * time.Minute
+	}
+
+	return timeout
 }
 
 func (here *HereServer) getSSHHostKey() (ssh.Signer, error) {
