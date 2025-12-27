@@ -21,3 +21,12 @@ func (here *HereServer) getHostSuffix() string {
 
 	return addr
 }
+
+func (here *HereServer) getHostPerfix() string {
+	addr, ok := os.LookupEnv("HTTP_HOST_PREFIX")
+	if !ok {
+		return "http://"
+	}
+
+	return addr
+}

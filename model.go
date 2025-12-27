@@ -18,6 +18,11 @@ type RemoteForwardChannel struct {
 	OriginPort uint32
 }
 
+type OverrideModel struct {
+	DestPort uint32
+	Override RemoteForwardChannel
+}
+
 type MappingModel struct {
 	connection *ssh.ServerConn
 	channel    RemoteForwardChannel

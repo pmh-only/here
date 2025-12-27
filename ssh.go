@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand/v2"
 	"net"
 	"strconv"
 	"strings"
@@ -42,6 +43,11 @@ func (here *HereServer) onSSHForwardRequest(ctx ssh.Context, srv *ssh.Server, re
 
 	log.Printf("Received Forward Request: %s:%d", payload.BindAddr, payload.BindPort)
 
+	assignedPort := payload.BindPort
+	if assignedPort == 0 {
+		assignedPort = rand.Uint32N(10000) + 10000
+	}
+
 	originAddr, orignPortStr, err := net.SplitHostPort(ctx.RemoteAddr().String())
 	if err != nil {
 		log.Printf("Failed to parse remote address: %v", err)
@@ -56,36 +62,41 @@ func (here *HereServer) onSSHForwardRequest(ctx ssh.Context, srv *ssh.Server, re
 
 	remoteForwardChannelsRaw := ctx.Value("RemoteForwardChannels")
 	if remoteForwardChannelsRaw == nil {
-		remoteForwardChannelsRaw = []RemoteForwardChannel{}
+		remoteForwardChannelsRaw = []OverrideModel{}
 	}
 
-	remoteForwardChannels, ok := remoteForwardChannelsRaw.([]RemoteForwardChannel)
+	remoteForwardChannels, ok := remoteForwardChannelsRaw.([]OverrideModel)
 	if !ok {
 		log.Println("Invalid RemoteForwardChannels type in context")
 		return false, []byte{}
 	}
 
-	remoteForwardChannels = append(remoteForwardChannels, RemoteForwardChannel{
-		DestAddr:   payload.BindAddr,
-		DestPort:   payload.BindPort,
-		OriginAddr: originAddr,
-		OriginPort: uint32(originPort),
+	remoteForwardChannels = append(remoteForwardChannels, OverrideModel{
+		payload.BindPort,
+		RemoteForwardChannel{
+			DestAddr:   payload.BindAddr,
+			DestPort:   assignedPort,
+			OriginAddr: originAddr,
+			OriginPort: uint32(originPort),
+		},
 	})
 
 	ctx.SetValue("RemoteForwardChannels", remoteForwardChannels)
 
+	log.Printf("Assigned port %d for forward request", assignedPort)
+
 	return true, gossh.Marshal(RemoteForwardSuccess{
-		payload.BindPort,
+		assignedPort,
 	})
 }
 
 func (here *HereServer) onSSHConnection(s ssh.Session) {
 	remoteForwardChannelsRaw := s.Context().Value("RemoteForwardChannels")
 	if remoteForwardChannelsRaw == nil {
-		remoteForwardChannelsRaw = []RemoteForwardChannel{}
+		remoteForwardChannelsRaw = []OverrideModel{}
 	}
 
-	remoteForwardChannels, ok := remoteForwardChannelsRaw.([]RemoteForwardChannel)
+	remoteForwardChannels, ok := remoteForwardChannelsRaw.([]OverrideModel)
 	if !ok {
 		log.Println("Invalid RemoteForwardChannels type")
 		io.WriteString(s, "Internal server error\n")
@@ -99,7 +110,13 @@ func (here *HereServer) onSSHConnection(s ssh.Session) {
 	io.WriteString(s, fmt.Sprintf("You requested %d service(s):\n", len(remoteForwardChannels)))
 
 	for i, remoteForwardChannels := range remoteForwardChannels {
-		io.WriteString(s, fmt.Sprintf("%d -> %s\n", remoteForwardChannels.DestPort, ids[i]))
+		io.WriteString(s, fmt.Sprintf(
+			"#%d (-R%d) -> %s%s%s\n",
+			i,
+			remoteForwardChannels.DestPort,
+			ids[i],
+			here.getHostPerfix(),
+			here.getHostSuffix()))
 	}
 
 	<-s.Context().Done()
@@ -114,7 +131,7 @@ func (here *HereServer) onSSHConnection(s ssh.Session) {
 	here.mappingsMu.Unlock()
 }
 
-func (here *HereServer) registerForwards(ctx ssh.Context, remoteForwardChannels []RemoteForwardChannel) []string {
+func (here *HereServer) registerForwards(ctx ssh.Context, remoteForwardChannels []OverrideModel) []string {
 	conn, ok := ctx.Value(ssh.ContextKeyConn).(*gossh.ServerConn)
 	if !ok {
 		log.Println("Failed to get SSH connection from context")
@@ -130,12 +147,17 @@ func (here *HereServer) registerForwards(ctx ssh.Context, remoteForwardChannels 
 			continue
 		}
 
-		ids = append(ids, id.String())
+		idString := id.String()
+		if remoteForwardChannels.Override.DestAddr != "localhost" {
+			idString = remoteForwardChannels.Override.DestAddr
+		}
+
+		ids = append(ids, idString)
 
 		here.mappingsMu.Lock()
-		here.mappings[id.String()] = MappingModel{
+		here.mappings[idString] = MappingModel{
 			conn,
-			remoteForwardChannels,
+			remoteForwardChannels.Override,
 		}
 		here.mappingsMu.Unlock()
 	}
