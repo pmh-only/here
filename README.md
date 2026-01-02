@@ -94,15 +94,15 @@ docker run -d \
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SSH_LISTEN_ADDR` | `:2222` | The address and port where the SSH server listens for incoming connections |
-| `HTTP_LISTEN_ADDR` | `:8080` | The address and port where the HTTP reverse proxy listens |
-| `HTTP_HOST_SUFFIX` | `.local` | The domain suffix appended to generated subdomains (e.g., `.yourdomain.com`) |
-| `HTTP_HOST_PREFIX` | `http://` | The URL scheme prefix for generated links (`http://` or `https://`) |
-| `SSH_PASSWORD` | _(none)_ | Password for authenticated login mode. If not set, authentication is disabled |
-| `UNAUTHENTICATED_TIMEOUT` | `30m` | Session timeout for anonymous connections (e.g., `5m`, `1h`, `30m`) |
-| `DATA_PATH` | `/data` | Directory path where persistent data (like SSH host keys) is stored |
+| Variable                  | Default   | Description                                                                   |
+| ------------------------- | --------- | ----------------------------------------------------------------------------- |
+| `SSH_LISTEN_ADDR`         | `:2222`   | The address and port where the SSH server listens for incoming connections    |
+| `HTTP_LISTEN_ADDR`        | `:8080`   | The address and port where the HTTP reverse proxy listens                     |
+| `HTTP_HOST_SUFFIX`        | `.local`  | The domain suffix appended to generated subdomains (e.g., `.yourdomain.com`)  |
+| `HTTP_HOST_PREFIX`        | `http://` | The URL scheme prefix for generated links (`http://` or `https://`)           |
+| `SSH_PASSWORD`            | _(none)_  | Password for authenticated login mode. If not set, authentication is disabled |
+| `UNAUTHENTICATED_TIMEOUT` | `30m`     | Session timeout for anonymous connections (e.g., `5m`, `1h`, `30m`)           |
+| `DATA_PATH`               | `/data`   | Directory path where persistent data (like SSH host keys) is stored           |
 
 ### Docker Compose Example
 
@@ -132,6 +132,7 @@ services:
 ## Limitations
 
 - **Only HTTP connections are supported (not TCP or UDP level)**: This limitation exists because the service uses subdomain-based routing. Supporting raw TCP or UDP would require dedicated IP addresses for each tunnel, which is beyond the scope of this project.
+- **HTTPS backends and virtual-host–based web servers are not supported** because the OpenSSH client does not provide the origin domain information to HereServer. As a result, the correct values for the SNI field and the Host header cannot be determined.
 
 ## Copyright
 
