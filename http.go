@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/tls"
 	"log"
-	"net"
 	"net/http"
 	"net/http/httputil"
 	"strings"
@@ -68,37 +67,6 @@ func (here *HereServer) onHTTPConnection(w http.ResponseWriter, r *http.Request)
 		Director: func(req *http.Request) {
 			req.URL.Scheme = "http"
 			req.URL.Host = host
-			req.Host = r.Host
-
-			// Extract client IP from RemoteAddr
-			clientIP, _, err := net.SplitHostPort(r.RemoteAddr)
-			if err != nil {
-				clientIP = r.RemoteAddr
-			}
-
-			// Set X-Real-IP header (immediate client)
-			req.Header.Set("X-Real-IP", clientIP)
-
-			// Handle X-Forwarded-For header
-			if prior := req.Header.Get("X-Forwarded-For"); prior != "" {
-				// Append to existing X-Forwarded-For chain
-				req.Header.Set("X-Forwarded-For", prior+", "+clientIP)
-			} else {
-				// Create new X-Forwarded-For header
-				req.Header.Set("X-Forwarded-For", clientIP)
-			}
-
-			// Set X-Forwarded-Proto header (protocol used by client)
-			proto := "http"
-			if r.TLS != nil {
-				proto = "https"
-			}
-			req.Header.Set("X-Forwarded-Proto", proto)
-
-			// Set X-Forwarded-Host header (original host requested by client)
-			if r.Host != "" {
-				req.Header.Set("X-Forwarded-Host", r.Host)
-			}
 		},
 		Transport: &http.Transport{
 			Proxy:               nil,

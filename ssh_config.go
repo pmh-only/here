@@ -38,7 +38,7 @@ func (here *HereServer) isPasswordRequired() bool {
 func (here *HereServer) getUnauthenticatedTimeout() time.Duration {
 	timeoutStr, ok := os.LookupEnv("UNAUTHENTICATED_TIMEOUT")
 	if !ok {
-		return 30 * time.Minute // Default: 30 minutes
+		return 30 * time.Minute
 	}
 
 	timeout, err := time.ParseDuration(timeoutStr)

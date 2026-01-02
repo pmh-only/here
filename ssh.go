@@ -90,14 +90,12 @@ func (here *HereServer) onSSHForwardRequest(ctx ssh.Context, srv *ssh.Server, re
 	})
 }
 
-// displayWelcomeBanner shows the welcome message
 func displayWelcomeBanner(s ssh.Session) {
 	io.WriteString(s, fmt.Sprintf("\n%s%s╔═══════════════════════════════╗%s\n", colorBold, colorCyan, colorReset))
 	io.WriteString(s, fmt.Sprintf("%s%s║   Welcome to HereServer!      ║%s\n", colorBold, colorCyan, colorReset))
 	io.WriteString(s, fmt.Sprintf("%s%s╚═══════════════════════════════╝%s\n\n", colorBold, colorCyan, colorReset))
 }
 
-// selectMode prompts user to choose between anonymous or login mode
 func (here *HereServer) selectMode(s ssh.Session) (authenticated bool, err error) {
 	timeoutDuration := here.getUnauthenticatedTimeout()
 
@@ -131,7 +129,6 @@ func (here *HereServer) selectMode(s ssh.Session) (authenticated bool, err error
 	}
 }
 
-// authenticateUser handles password authentication
 func (here *HereServer) authenticateUser(s ssh.Session) (bool, error) {
 	writePrompt(s, "\nPassword: ")
 
@@ -155,7 +152,6 @@ func (here *HereServer) authenticateUser(s ssh.Session) (bool, error) {
 	return true, nil
 }
 
-// displayServiceInfo shows the registered tunnels
 func (here *HereServer) displayServiceInfo(s ssh.Session, ids []string, channels []OverrideModel) {
 	io.WriteString(s, fmt.Sprintf("%s%sYou requested %d service(s):%s\n",
 		colorBold, colorMagenta, len(channels), colorReset))
@@ -172,7 +168,6 @@ func (here *HereServer) displayServiceInfo(s ssh.Session, ids []string, channels
 	}
 }
 
-// monitorInput watches for Ctrl+C/Ctrl+D during active tunnel
 func monitorInput(s ssh.Session) <-chan error {
 	inputDone := make(chan error, 1)
 	go func() {
@@ -200,7 +195,6 @@ func monitorInput(s ssh.Session) <-chan error {
 	return inputDone
 }
 
-// handleSessionTimeout manages timeout for authenticated/anonymous sessions
 func (here *HereServer) handleSessionTimeout(s ssh.Session, authenticated bool, inputDone <-chan error) {
 	if !authenticated {
 		timeoutDuration := here.getUnauthenticatedTimeout()
@@ -242,7 +236,6 @@ func (here *HereServer) handleSessionTimeout(s ssh.Session, authenticated bool, 
 }
 
 func (here *HereServer) onSSHConnection(s ssh.Session) {
-	// Get remote forward channels from context
 	remoteForwardChannelsRaw := s.Context().Value("RemoteForwardChannels")
 	if remoteForwardChannelsRaw == nil {
 		remoteForwardChannelsRaw = []OverrideModel{}
@@ -255,10 +248,8 @@ func (here *HereServer) onSSHConnection(s ssh.Session) {
 		return
 	}
 
-	// Display welcome banner
 	displayWelcomeBanner(s)
 
-	// Handle authentication/mode selection if password is configured
 	authenticated := false
 	if here.isPasswordRequired() {
 		var err error
@@ -268,20 +259,18 @@ func (here *HereServer) onSSHConnection(s ssh.Session) {
 		}
 	}
 
-	// Register forwards and display service information
 	ids := here.registerForwards(s.Context(), remoteForwardChannels)
 	here.displayServiceInfo(s, ids, remoteForwardChannels)
 
-	// Monitor for Ctrl+C/Ctrl+D and handle session timeout
 	inputDone := monitorInput(s)
 	here.handleSessionTimeout(s, authenticated, inputDone)
 
-	// Cleanup mappings when session ends
 	log.Printf("Session context finished, cleaning up %d mappings", len(ids))
 	here.mappingsMu.Lock()
 	for _, id := range ids {
 		delete(here.mappings, id)
 	}
+
 	here.mappingsMu.Unlock()
 }
 
@@ -307,6 +296,7 @@ func (here *HereServer) registerForwards(ctx ssh.Context, remoteForwardChannels 
 			conn,
 			remoteForwardChannels.Override,
 		}
+
 		here.mappingsMu.Unlock()
 	}
 
