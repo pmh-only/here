@@ -37,10 +37,10 @@ func (m *MappingDisplayModel) TogglePause() {
 
 	mapping := here.mappings[m.SourceSubdomain]
 
-	mapping.IsPaused = !mapping.IsPaused
-	here.mappings[m.SourceSubdomain] = mapping
+	mapping.IsPaused = !m.Actual.IsPaused
+	m.Actual.IsPaused = !m.Actual.IsPaused
 
-	m.Actual.IsPaused = mapping.IsPaused
+	here.mappings[m.SourceSubdomain] = mapping
 }
 
 func (m *MappingDisplayModel) RenameSubdomain(newDomain string) {

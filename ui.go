@@ -34,11 +34,11 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 		return []key.Binding{
 			key.NewBinding(
 				key.WithKeys("p"),
-				key.WithHelp("p", "pause"),
+				key.WithHelp("p", "pause/resume"),
 			),
 			key.NewBinding(
 				key.WithKeys("e"),
-				key.WithHelp("e", "edit ID"),
+				key.WithHelp("e", "edit domain"),
 			),
 		}
 	}
@@ -47,11 +47,11 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 		return []key.Binding{
 			key.NewBinding(
 				key.WithKeys("p"),
-				key.WithHelp("p", "pause subdomain"),
+				key.WithHelp("p", "pause/resume subdomain"),
 			),
 			key.NewBinding(
 				key.WithKeys("e"),
-				key.WithHelp("e", "edit tunnel ID"),
+				key.WithHelp("e", "change subdomain"),
 			),
 		}
 	}
