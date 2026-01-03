@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"math/rand/v2"
 	"net"
 	"strconv"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish"
@@ -141,4 +143,21 @@ func (here *HereServer) onSSHClose(s ssh.Session) {
 		delete(here.mappings, mapping.SourceSubdomain)
 	}
 	here.mappingsMu.Unlock()
+
+	if s.Context().Value("timeout") != nil {
+		fmt.Fprint(s, lipgloss.NewStyle().
+			Padding(2).
+			Width(50).
+			Background(lipgloss.Color("#212121")).
+			Foreground(lipgloss.Color("#f7f784")).
+			Render(fmt.Sprintf(`Your tunneling session has been terminated after %v because the user is not authenticated.
+
+If you require additional time, login is necessary; however, sign-up is not available at the moment. We are planning to integrate the server with a web console to make it easier for users to obtain extended timeouts, but this may take some time to complete.
+
+In the meantime, you are welcome to self-host the server to use it with an unlimited timeout. Please refer to the self-hosting guide here: https://github.com/pmh-only/here
+
+thanks. -p`,
+				here.getUnauthenticatedTimeout()))+"\n")
+		return
+	}
 }

@@ -23,15 +23,20 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 	items := createTunnelIndex(mappings)
 	list := list.New(items, list.NewDefaultDelegate(), 0, 0)
 
+	passwordNeeded := here.isPasswordRequired()
+
 	model := MainUIModel{
-		list:     list,
-		mappings: mappings,
+		list:           list,
+		mappings:       mappings,
+		passwordNeeded: passwordNeeded,
+		authenticated:  false,
+		session:        s,
 	}
 
 	model.list.SetFilteringEnabled(false)
 	model.list.Title = "Here: simple & nodeps tunnel"
 	model.list.AdditionalShortHelpKeys = func() []key.Binding {
-		return []key.Binding{
+		bindings := []key.Binding{
 			key.NewBinding(
 				key.WithKeys("p"),
 				key.WithHelp("p", "pause/resume"),
@@ -41,10 +46,17 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 				key.WithHelp("e", "edit domain"),
 			),
 		}
+		if passwordNeeded {
+			bindings = append(bindings, key.NewBinding(
+				key.WithKeys("l"),
+				key.WithHelp("l", "login"),
+			))
+		}
+		return bindings
 	}
 
 	model.list.AdditionalFullHelpKeys = func() []key.Binding {
-		return []key.Binding{
+		bindings := []key.Binding{
 			key.NewBinding(
 				key.WithKeys("p"),
 				key.WithHelp("p", "pause/resume subdomain"),
@@ -54,6 +66,13 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 				key.WithHelp("e", "change subdomain"),
 			),
 		}
+		if passwordNeeded {
+			bindings = append(bindings, key.NewBinding(
+				key.WithKeys("l"),
+				key.WithHelp("l", "login with password"),
+			))
+		}
+		return bindings
 	}
 
 	return model, []tea.ProgramOption{tea.WithAltScreen()}

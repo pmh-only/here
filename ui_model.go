@@ -1,12 +1,25 @@
 package main
 
 import (
+	"fmt"
+	"strings"
+	"time"
+
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
+	"github.com/charmbracelet/ssh"
 )
+
+type sessionTimeoutMsg struct{}
+
+func sessionTimeoutCmd(timeout time.Duration) tea.Cmd {
+	return tea.Tick(timeout, func(time.Time) tea.Msg {
+		return sessionTimeoutMsg{}
+	})
+}
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
@@ -19,33 +32,76 @@ func (i MainUIListItem) Description() string { return i.desc }
 func (i MainUIListItem) FilterValue() string { return i.title }
 
 type MainUIModel struct {
-	list         list.Model
-	mappings     []MappingDisplayModel
-	form         *huh.Form
-	editMode     bool
-	editingIndex int
-	newSubdomain string
+	list           list.Model
+	mappings       []MappingDisplayModel
+	form           *huh.Form
+	editMode       bool
+	loginMode      bool
+	editingIndex   int
+	newSubdomain   string
+	password       string
+	authenticated  bool
+	passwordNeeded bool
+	session        ssh.Session
+	height         int
+	width          int
 }
 
 func (m MainUIModel) Init() tea.Cmd {
+	if m.passwordNeeded && !m.authenticated {
+		return sessionTimeoutCmd(here.getUnauthenticatedTimeout())
+	}
 	return nil
 }
 
 func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
-	// Handle window size for both list and form
 	switch msg := msg.(type) {
+	case sessionTimeoutMsg:
+		if !m.authenticated && m.passwordNeeded {
+			log.Info("Session timeout reached for unauthenticated user")
+			m.session.Context().SetValue("timeout", true)
+			return m, tea.Quit
+		}
+		return m, nil
 	case tea.WindowSizeMsg:
 		h, v := docStyle.GetFrameSize()
-		m.list.SetSize(msg.Width-h, msg.Height-v)
+		m.width = msg.Width - h
+		m.height = msg.Height - v
 	case tea.KeyMsg:
-		if !m.editMode && msg.String() == "ctrl+c" {
+		if !m.editMode && !m.loginMode && msg.String() == "ctrl+c" {
 			return m, tea.Quit
 		}
 
-		if !m.editMode {
+		if !m.editMode && !m.loginMode {
 			switch msg.String() {
+			case "l":
+				if !m.passwordNeeded {
+					return m, nil
+				}
+				if m.authenticated {
+					statusMessage := lipgloss.NewStyle().
+						Foreground(lipgloss.Color("#42f157")).
+						Render("\nAlready authenticated.")
+					return m, m.list.NewStatusMessage(statusMessage)
+				}
+
+				m.loginMode = true
+				m.password = ""
+				m.form = huh.NewForm(
+					huh.NewGroup(
+						huh.NewInput().
+							Key("password").
+							Title("Login").
+							Value(&m.password).
+							EchoMode(huh.EchoModePassword).
+							Placeholder("Enter password"),
+					),
+				).WithWidth(60)
+
+				return m, m.form.Init()
+
 			case "e":
 				selectedIdx := m.list.Index()
 				m.editingIndex = selectedIdx
@@ -56,9 +112,9 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					huh.NewGroup(
 						huh.NewInput().
 							Key("subdomain").
-							Title("Edit tunnel ID").
+							Title("Edit tunnel subdomain").
 							Value(&m.newSubdomain).
-							Placeholder("Enter new tunnel ID"),
+							Placeholder("Enter new tunnel subdomain"),
 					),
 				).WithWidth(60)
 
@@ -81,11 +137,49 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				items := createTunnelIndex(m.mappings)
 				listCmd := m.list.SetItems(items)
-				statusCmd := m.list.NewStatusMessage("Paused/Resumed " + m.mappings[selectedIdx].SourceSubdomain)
+				statusCmd := m.list.NewStatusMessage("\nPaused/Resumed " + m.mappings[selectedIdx].SourceSubdomain)
 
 				return m, tea.Batch(listCmd, statusCmd)
 			}
 		}
+	}
+
+	if m.loginMode && m.form != nil {
+		form, cmd := m.form.Update(msg)
+		if f, ok := form.(*huh.Form); ok {
+			m.form = f
+			cmds = append(cmds, cmd)
+		}
+
+		if m.form.State == huh.StateCompleted {
+			password := m.form.GetString("password")
+			log.Info("Login form completed")
+
+			if password == here.getSSHPassword() {
+				m.authenticated = true
+				statusCmd := m.list.NewStatusMessage(lipgloss.NewStyle().
+					Foreground(lipgloss.Color("#42f157")).
+					Render("\nLogin successful! Session timeout removed."))
+				cmds = append(cmds, statusCmd)
+			} else {
+				statusCmd := m.list.NewStatusMessage(lipgloss.NewStyle().
+					Foreground(lipgloss.Color("#f14242ff")).
+					Render("\nLogin failed: incorrect password"))
+				cmds = append(cmds, statusCmd)
+			}
+
+			m.loginMode = false
+			m.form = nil
+			return m, tea.Batch(cmds...)
+		}
+
+		if m.form.State == huh.StateAborted {
+			m.loginMode = false
+			m.form = nil
+			return m, tea.Batch(cmds...)
+		}
+
+		return m, tea.Batch(cmds...)
 	}
 
 	if m.editMode && m.form != nil {
@@ -103,7 +197,7 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.mappings[m.editingIndex].RenameSubdomain(newSubdomain)
 				items := createTunnelIndex(m.mappings)
 				listCmd := m.list.SetItems(items)
-				statusCmd := m.list.NewStatusMessage("Renamed tunnel to: " + newSubdomain)
+				statusCmd := m.list.NewStatusMessage("\nRenamed tunnel to: " + newSubdomain)
 				cmds = append(cmds, listCmd, statusCmd)
 			}
 
@@ -129,8 +223,29 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m MainUIModel) View() string {
-	if m.editMode {
+	if m.loginMode {
+		m.list.SetSize(m.width, m.height-strings.Count(m.form.View(), "\n")-2)
 		return docStyle.Render(m.list.View() + "\n\n" + m.form.View())
 	}
-	return docStyle.Render(m.list.View())
+
+	if m.editMode {
+		m.list.SetSize(m.width, m.height-strings.Count(m.form.View(), "\n")-2)
+		return docStyle.Render(m.list.View() + "\n\n" + m.form.View())
+	}
+
+	m.list.SetSize(m.width, m.height)
+	login := ""
+
+	if !m.authenticated && here.isPasswordRequired() {
+		m.list.SetSize(m.width, m.height-1)
+		login += "\n  " + lipgloss.
+			NewStyle().
+			Background(lipgloss.Color("#212121")).
+			Foreground(lipgloss.Color("#f7f784")).
+			PaddingLeft(1).
+			PaddingRight(1).
+			Render(fmt.Sprintf("Note: Unauthenticated session will timeout after %v", here.getUnauthenticatedTimeout()))
+	}
+
+	return docStyle.Render(m.list.View() + login)
 }
