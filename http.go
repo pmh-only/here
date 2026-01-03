@@ -38,7 +38,12 @@ func (here *HereServer) onHTTPConnection(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	payload := gossh.Marshal(&mapping.Connection)
+	if mapping.IsPaused {
+		http.Error(w, "Tunnel Paused", http.StatusServiceUnavailable)
+		return
+	}
+
+	payload := gossh.Marshal(mapping.Actual)
 	ch, reqs, err := mapping.Connection.OpenChannel("forwarded-tcpip", payload)
 
 	if err != nil {

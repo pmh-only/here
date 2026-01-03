@@ -20,16 +20,16 @@ type HereServer struct {
 	forwardHandler *ssh.ForwardedTCPHandler
 }
 
-var srv = HereServer{}
+var here = HereServer{}
 
 func main() {
-	srv.mappings = map[string]MappingModel{}
+	here.mappings = map[string]MappingModel{}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	go srv.sshServerStart()
-	go srv.httpServerStart()
+	go here.sshServerStart()
+	go here.httpServerStart()
 
 	<-ctx.Done()
 	os.Exit(0)

@@ -25,6 +25,12 @@ func (here *HereServer) sshServerStart() {
 			bubbletea.Middleware(teaHandler),
 			activeterm.Middleware(),
 			logging.Middleware(),
+			func(next ssh.Handler) ssh.Handler {
+				return func(s ssh.Session) {
+					next(s)
+					here.onSSHClose(s)
+				}
+			},
 		),
 	)
 
@@ -80,6 +86,7 @@ func (here *HereServer) onSSHForwardRequest(ctx ssh.Context, srv *ssh.Server, re
 			OriginAddr: originAddr,
 			OriginPort: uint32(originPort),
 		},
+		false,
 	}
 
 	id := randStringRunes(10)
@@ -87,9 +94,25 @@ func (here *HereServer) onSSHForwardRequest(ctx ssh.Context, srv *ssh.Server, re
 		id = payload.BindAddr
 	}
 
-	here.mappingsMu.Lock()
-	here.mappings[id] = mappingModel
-	here.mappingsMu.Unlock()
+	mapping := MappingDisplayModel{
+		SourceSubdomain: id,
+		TargetPort:      payload.BindPort,
+		Actual:          mappingModel,
+	}
+
+	_, idAlreadyExist := here.mappings[id]
+
+	if idAlreadyExist {
+		log.Info("id conflict found", "id", id)
+		mapping.IsConflict = true
+		mapping.Actual.IsPaused = true
+	}
+
+	if !idAlreadyExist {
+		here.mappingsMu.Lock()
+		here.mappings[id] = mappingModel
+		here.mappingsMu.Unlock()
+	}
 
 	log.Info("Assigned port for forward request", "port", assignedPort)
 
@@ -98,14 +121,24 @@ func (here *HereServer) onSSHForwardRequest(ctx ssh.Context, srv *ssh.Server, re
 		mappings = []MappingDisplayModel{}
 	}
 
-	mappings = append(mappings, MappingDisplayModel{
-		SourceSubdomain: id,
-		TargetPort:      payload.BindPort,
-	})
+	mappings = append(mappings, mapping)
 
 	ctx.SetValue(MappingContextKey, mappings)
 
 	return true, gossh.Marshal(RemoteForwardSuccess{
 		assignedPort,
 	})
+}
+
+func (here *HereServer) onSSHClose(s ssh.Session) {
+	mappings, ok := s.Context().Value(MappingContextKey).([]MappingDisplayModel)
+	if !ok {
+		log.Error("failed to parse mappings on close session")
+	}
+
+	here.mappingsMu.Lock()
+	for _, mapping := range mappings {
+		delete(here.mappings, mapping.SourceSubdomain)
+	}
+	here.mappingsMu.Unlock()
 }
