@@ -2,12 +2,12 @@ package main
 
 import (
 	"crypto/tls"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/log"
 	gossh "golang.org/x/crypto/ssh"
 )
 
@@ -16,7 +16,7 @@ func (here *HereServer) httpServerStart() {
 	here.http.Addr = here.getHTTPAddr()
 	here.http.Handler = http.HandlerFunc(here.onHTTPConnection)
 
-	log.Printf("HereServer http server is listening on '%s'", here.getHTTPAddr())
+	log.Info("HereServer http server is listening", "Addr", here.getHTTPAddr())
 	log.Fatal(here.http.ListenAndServe())
 }
 
@@ -38,17 +38,11 @@ func (here *HereServer) onHTTPConnection(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	payload := gossh.Marshal(&mapping.channel)
-	ch, reqs, err := mapping.connection.OpenChannel("forwarded-tcpip", payload)
+	payload := gossh.Marshal(&mapping.Connection)
+	ch, reqs, err := mapping.Connection.OpenChannel("forwarded-tcpip", payload)
 
 	if err != nil {
-		log.Printf("Failed to open channel for %s: %v", host, err)
-
-		// Remove stale mapping
-		here.mappingsMu.Lock()
-		delete(here.mappings, host)
-		here.mappingsMu.Unlock()
-
+		log.Error("Failed to open channel for %s: %v", host, err)
 		http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
 		return
 	}
@@ -80,8 +74,8 @@ func (here *HereServer) onHTTPConnection(w http.ResponseWriter, r *http.Request)
 			TLSClientConfig:     &tls.Config{InsecureSkipVerify: false},
 		},
 		ModifyResponse: nil,
-		ErrorHandler: func(rw http.ResponseWriter, req *http.Request, e error) {
-			log.Println("proxy error:", e)
+		ErrorHandler: func(rw http.ResponseWriter, req *http.Request, err error) {
+			log.Error(err)
 			http.Error(rw, "Bad Gateway", http.StatusBadGateway)
 		},
 		FlushInterval: 100 * time.Millisecond,

@@ -5,12 +5,11 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
-	"log"
 	"os"
 	"path"
 	"time"
 
-	"golang.org/x/crypto/ssh"
+	"github.com/charmbracelet/log"
 )
 
 func (here *HereServer) getSSHAddr() string {
@@ -43,27 +42,27 @@ func (here *HereServer) getUnauthenticatedTimeout() time.Duration {
 
 	timeout, err := time.ParseDuration(timeoutStr)
 	if err != nil {
-		log.Printf("Invalid UNAUTHENTICATED_TIMEOUT value '%s', using default 30m: %v", timeoutStr, err)
+		log.Warn("Invalid UNAUTHENTICATED_TIMEOUT value '%s', using default 30m: %v", timeoutStr, err)
 		return 30 * time.Minute
 	}
 
 	return timeout
 }
 
-func (here *HereServer) getSSHHostKey() (ssh.Signer, error) {
+func (here *HereServer) getSSHHostKey() []byte {
 	hostKeyPath := path.Join(here.getDataPath(), "hostkey")
 	hostKeyInfo, err := os.Stat(hostKeyPath)
 	if err != nil || hostKeyInfo.IsDir() {
-		log.Println("no hostkey found, try to create...")
+		log.Warn("no hostkey found, try to create...")
 
 		privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 		if err != nil {
-			return nil, err
+			log.Fatal(err)
 		}
 
 		privateKeyDER, err := x509.MarshalPKCS8PrivateKey(privateKey)
 		if err != nil {
-			return nil, err
+			log.Fatal(err)
 		}
 
 		privateKeyBlock := &pem.Block{
@@ -74,14 +73,14 @@ func (here *HereServer) getSSHHostKey() (ssh.Signer, error) {
 
 		err = os.WriteFile(hostKeyPath, privateKeyPEM, 0o600)
 		if err != nil {
-			return nil, err
+			log.Fatal(err)
 		}
 	}
 
 	hostKey, err := os.ReadFile(hostKeyPath)
 	if err != nil {
-		return nil, err
+		log.Fatal(err)
 	}
 
-	return ssh.ParsePrivateKey(hostKey)
+	return hostKey
 }

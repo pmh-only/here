@@ -22,7 +22,7 @@ func (here *HereServer) getHostSuffix() string {
 	return addr
 }
 
-func (here *HereServer) getHostPerfix() string {
+func (here *HereServer) getHostPrefix() string {
 	addr, ok := os.LookupEnv("HTTP_HOST_PREFIX")
 	if !ok {
 		return "http://"

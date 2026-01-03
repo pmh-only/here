@@ -8,11 +8,11 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/gliderlabs/ssh"
+	"github.com/charmbracelet/ssh"
 )
 
 type HereServer struct {
-	ssh  ssh.Server
+	ssh  *ssh.Server
 	http http.Server
 
 	mappings       map[string]MappingModel
@@ -20,8 +20,9 @@ type HereServer struct {
 	forwardHandler *ssh.ForwardedTCPHandler
 }
 
+var srv = HereServer{}
+
 func main() {
-	srv := HereServer{}
 	srv.mappings = map[string]MappingModel{}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
