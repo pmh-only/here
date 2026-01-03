@@ -38,6 +38,10 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 	model.list.AdditionalShortHelpKeys = func() []key.Binding {
 		bindings := []key.Binding{
 			key.NewBinding(
+				key.WithKeys("c"),
+				key.WithHelp("c", "copy url"),
+			),
+			key.NewBinding(
 				key.WithKeys("p"),
 				key.WithHelp("p", "pause/resume"),
 			),
@@ -57,6 +61,10 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 
 	model.list.AdditionalFullHelpKeys = func() []key.Binding {
 		bindings := []key.Binding{
+			key.NewBinding(
+				key.WithKeys("c"),
+				key.WithHelp("c", "copy tunnel url"),
+			),
 			key.NewBinding(
 				key.WithKeys("p"),
 				key.WithHelp("p", "pause/resume subdomain"),

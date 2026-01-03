@@ -3,8 +3,6 @@ package main
 import (
 	"crypto/subtle"
 	"fmt"
-	"strings"
-	"time"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -13,14 +11,6 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/charmbracelet/ssh"
 )
-
-type sessionTimeoutMsg struct{}
-
-func sessionTimeoutCmd(timeout time.Duration) tea.Cmd {
-	return tea.Tick(timeout, func(time.Time) tea.Msg {
-		return sessionTimeoutMsg{}
-	})
-}
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
@@ -141,6 +131,12 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				statusCmd := m.list.NewStatusMessage("\nPaused/Resumed " + m.mappings[selectedIdx].SourceSubdomain)
 
 				return m, tea.Batch(listCmd, statusCmd)
+
+			case "c":
+				return m, tea.Batch(copyToClipboard(fmt.Sprint(
+					here.getHostPrefix(),
+					m.mappings[m.list.Index()].SourceSubdomain,
+					here.getHostSuffix())), m.list.NewStatusMessage("\nCopied Tunnel URL"))
 			}
 		}
 	}
@@ -222,32 +218,4 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	return m, tea.Batch(cmds...)
-}
-
-func (m MainUIModel) View() string {
-	if m.loginMode {
-		m.list.SetSize(m.width, m.height-strings.Count(m.form.View(), "\n")-2)
-		return docStyle.Render(m.list.View() + "\n\n" + m.form.View())
-	}
-
-	if m.editMode {
-		m.list.SetSize(m.width, m.height-strings.Count(m.form.View(), "\n")-2)
-		return docStyle.Render(m.list.View() + "\n\n" + m.form.View())
-	}
-
-	m.list.SetSize(m.width, m.height)
-	login := ""
-
-	if !m.authenticated && here.isPasswordRequired() {
-		m.list.SetSize(m.width, m.height-1)
-		login += "\n  " + lipgloss.
-			NewStyle().
-			Background(lipgloss.Color("#212121")).
-			Foreground(lipgloss.Color("#f7f784")).
-			PaddingLeft(1).
-			PaddingRight(1).
-			Render(fmt.Sprintf("Note: Unauthenticated session will timeout after %v", here.getUnauthenticatedTimeout()))
-	}
-
-	return docStyle.Render(m.list.View() + login)
 }
