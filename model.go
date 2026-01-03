@@ -35,10 +35,14 @@ func (m *MappingDisplayModel) TogglePause() {
 	here.mappingsMu.Lock()
 	defer here.mappingsMu.Unlock()
 
-	mapping := here.mappings[m.SourceSubdomain]
+	mapping, exists := here.mappings[m.SourceSubdomain]
+	if !exists {
+		return
+	}
 
-	mapping.IsPaused = !m.Actual.IsPaused
-	m.Actual.IsPaused = !m.Actual.IsPaused
+	newPausedState := !mapping.IsPaused
+	mapping.IsPaused = newPausedState
+	m.Actual.IsPaused = newPausedState
 
 	here.mappings[m.SourceSubdomain] = mapping
 }
@@ -52,8 +56,8 @@ func (m *MappingDisplayModel) RenameSubdomain(newDomain string) {
 	defer here.mappingsMu.Unlock()
 
 	oldDomain := m.SourceSubdomain
-
 	m.SourceSubdomain = newDomain
+
 	_, isAlreadyExist := here.mappings[newDomain]
 
 	if !m.IsConflict {
@@ -71,6 +75,6 @@ func (m *MappingDisplayModel) RenameSubdomain(newDomain string) {
 	here.mappings[newDomain] = MappingModel{
 		Connection: m.Actual.Connection,
 		Actual:     m.Actual.Actual,
-		IsPaused:   m.Actual.IsPaused,
+		IsPaused:   false,
 	}
 }

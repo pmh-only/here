@@ -1,30 +1,23 @@
 package main
 
 import (
-	"image/color"
-	"math/rand"
-
-	"github.com/charmbracelet/lipgloss"
-	"github.com/lucasb-eyer/go-colorful"
+	"crypto/rand"
+	"math/big"
 )
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
 
 func randStringRunes(n int) string {
 	b := make([]rune, n)
+	letterRunesLen := big.NewInt(int64(len(letterRunes)))
+
 	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+		num, err := rand.Int(rand.Reader, letterRunesLen)
+		if err != nil {
+			b[i] = 'a'
+			continue
+		}
+		b[i] = letterRunes[num.Int64()]
 	}
 	return string(b)
-}
-
-func rainbowBg(base lipgloss.Style, s string, colors []color.Color) string {
-	var str string
-
-	for i, ss := range s {
-		color, _ := colorful.MakeColor(colors[i%len(colors)])
-		str = str + base.Background(lipgloss.Color(color.Hex())).Render(string(ss))
-	}
-
-	return str
 }

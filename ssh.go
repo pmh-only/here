@@ -75,7 +75,7 @@ func (here *HereServer) onSSHForwardRequest(ctx ssh.Context, srv *ssh.Server, re
 	}
 
 	conn, ok := ctx.Value(ssh.ContextKeyConn).(*gossh.ServerConn)
-	if !ok {
+	if !ok || conn == nil {
 		log.Error("Failed to get SSH connection from context")
 		return false, []byte{}
 	}
@@ -102,19 +102,17 @@ func (here *HereServer) onSSHForwardRequest(ctx ssh.Context, srv *ssh.Server, re
 		Actual:          mappingModel,
 	}
 
+	here.mappingsMu.Lock()
 	_, idAlreadyExist := here.mappings[id]
 
 	if idAlreadyExist {
 		log.Info("id conflict found", "id", id)
 		mapping.IsConflict = true
 		mapping.Actual.IsPaused = true
-	}
-
-	if !idAlreadyExist {
-		here.mappingsMu.Lock()
+	} else {
 		here.mappings[id] = mappingModel
-		here.mappingsMu.Unlock()
 	}
+	here.mappingsMu.Unlock()
 
 	log.Info("Assigned port for forward request", "port", assignedPort)
 
@@ -134,8 +132,9 @@ func (here *HereServer) onSSHForwardRequest(ctx ssh.Context, srv *ssh.Server, re
 
 func (here *HereServer) onSSHClose(s ssh.Session) {
 	mappings, ok := s.Context().Value(MappingContextKey).([]MappingDisplayModel)
-	if !ok {
+	if !ok || mappings == nil {
 		log.Error("failed to parse mappings on close session")
+		return
 	}
 
 	here.mappingsMu.Lock()

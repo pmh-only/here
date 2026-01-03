@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/subtle"
 	"fmt"
 	"strings"
 	"time"
@@ -155,7 +156,8 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			password := m.form.GetString("password")
 			log.Info("Login form completed")
 
-			if password == here.getSSHPassword() {
+			expectedPassword := here.getSSHPassword()
+			if subtle.ConstantTimeCompare([]byte(password), []byte(expectedPassword)) == 1 {
 				m.authenticated = true
 				statusCmd := m.list.NewStatusMessage(lipgloss.NewStyle().
 					Foreground(lipgloss.Color("#42f157")).
@@ -191,7 +193,7 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if m.form.State == huh.StateCompleted {
 			newSubdomain := m.form.GetString("subdomain")
-			log.Print("Form completed with value:", newSubdomain)
+			log.Info("Form completed with value", "subdomain", newSubdomain)
 
 			if newSubdomain != "" && newSubdomain != m.mappings[m.editingIndex].SourceSubdomain {
 				m.mappings[m.editingIndex].RenameSubdomain(newSubdomain)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"net/http"
 	"net/http/httputil"
@@ -52,32 +53,42 @@ func (here *HereServer) onHTTPConnection(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	go gossh.DiscardRequests(reqs)
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+
+	go func() {
+		gossh.DiscardRequests(reqs)
+		cancel()
+	}()
 
 	conn := &sshNetConn{ch}
 
-	ctx := r.Context()
+	defer conn.Close()
+
 	go func() {
 		<-ctx.Done()
-		_ = conn.Close()
+		conn.Close()
 	}()
+
+	transport := &http.Transport{
+		Proxy:               nil,
+		DialContext:         oneShotDial(conn),
+		ForceAttemptHTTP2:   false,
+		DisableCompression:  false,
+		MaxIdleConns:        1,
+		MaxConnsPerHost:     1,
+		MaxIdleConnsPerHost: 1,
+		IdleConnTimeout:     30 * time.Second,
+		TLSClientConfig:     &tls.Config{InsecureSkipVerify: false},
+	}
+	defer transport.CloseIdleConnections()
 
 	proxy := &httputil.ReverseProxy{
 		Director: func(req *http.Request) {
 			req.URL.Scheme = "http"
 			req.URL.Host = host
 		},
-		Transport: &http.Transport{
-			Proxy:               nil,
-			DialContext:         oneShotDial(conn),
-			ForceAttemptHTTP2:   false,
-			DisableCompression:  false,
-			MaxIdleConns:        1,
-			MaxConnsPerHost:     1,
-			MaxIdleConnsPerHost: 1,
-			IdleConnTimeout:     30 * time.Second,
-			TLSClientConfig:     &tls.Config{InsecureSkipVerify: false},
-		},
+		Transport:      transport,
 		ModifyResponse: nil,
 		ErrorHandler: func(rw http.ResponseWriter, req *http.Request, err error) {
 			log.Error(err)

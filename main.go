@@ -7,7 +7,9 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/charmbracelet/ssh"
 )
 
@@ -32,5 +34,26 @@ func main() {
 	go here.httpServerStart()
 
 	<-ctx.Done()
+
+	log.Info("Shutting down servers...")
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+
+	if err := here.http.Shutdown(shutdownCtx); err != nil {
+		log.Error("HTTP server shutdown error", "err", err)
+	}
+
+	if here.ssh != nil {
+		if err := here.ssh.Close(); err != nil {
+			log.Error("SSH server shutdown error", "err", err)
+		}
+	}
+
+	here.mappingsMu.Lock()
+	here.mappings = nil
+	here.mappingsMu.Unlock()
+
+	log.Info("Shutdown complete")
 	os.Exit(0)
 }
