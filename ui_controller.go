@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/log"
 	"github.com/charmbracelet/ssh"
+	"github.com/charmbracelet/wish/bubbletea"
 )
 
 func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
@@ -20,6 +21,8 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 		return MainUIModel{}, nil
 	}
 
+	renderer := bubbletea.MakeRenderer(s)
+
 	items := createTunnelIndex(mappings)
 	list := list.New(items, list.NewDefaultDelegate(), 0, 0)
 
@@ -31,6 +34,7 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 		passwordNeeded: passwordNeeded,
 		authenticated:  false,
 		session:        s,
+		renderer:       renderer,
 	}
 
 	model.list.SetFilteringEnabled(false)

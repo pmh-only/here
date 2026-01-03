@@ -36,6 +36,7 @@ type MainUIModel struct {
 	session        ssh.Session
 	height         int
 	width          int
+	renderer       *lipgloss.Renderer
 }
 
 func (m MainUIModel) Init() tea.Cmd {
@@ -72,7 +73,7 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 				if m.authenticated {
-					statusMessage := lipgloss.NewStyle().
+					statusMessage := m.renderer.NewStyle().
 						Foreground(lipgloss.Color("#42f157")).
 						Render("\nAlready authenticated.")
 					return m, m.list.NewStatusMessage(statusMessage)
@@ -116,7 +117,7 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				mapping := m.mappings[selectedIdx]
 
 				if _, exist := here.mappings[mapping.SourceSubdomain]; mapping.IsConflict && exist {
-					statusMessage := lipgloss.NewStyle().
+					statusMessage := m.renderer.NewStyle().
 						Foreground(lipgloss.Color("#f14242ff")).
 						Render("\nthis tunnel has subdomain conflict.")
 
@@ -155,12 +156,12 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			expectedPassword := here.getSSHPassword()
 			if subtle.ConstantTimeCompare([]byte(password), []byte(expectedPassword)) == 1 {
 				m.authenticated = true
-				statusCmd := m.list.NewStatusMessage(lipgloss.NewStyle().
+				statusCmd := m.list.NewStatusMessage(m.renderer.NewStyle().
 					Foreground(lipgloss.Color("#42f157")).
 					Render("\nLogin successful! Session timeout removed."))
 				cmds = append(cmds, statusCmd)
 			} else {
-				statusCmd := m.list.NewStatusMessage(lipgloss.NewStyle().
+				statusCmd := m.list.NewStatusMessage(m.renderer.NewStyle().
 					Foreground(lipgloss.Color("#f14242ff")).
 					Render("\nLogin failed: incorrect password"))
 				cmds = append(cmds, statusCmd)
