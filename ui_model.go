@@ -12,8 +12,6 @@ import (
 	"github.com/charmbracelet/ssh"
 )
 
-var docStyle = lipgloss.NewStyle().Margin(1, 2)
-
 type MainUIListItem struct {
 	title, desc string
 }
@@ -37,6 +35,7 @@ type MainUIModel struct {
 	height         int
 	width          int
 	renderer       *lipgloss.Renderer
+	docStyle       lipgloss.Style
 }
 
 func (m MainUIModel) Init() tea.Cmd {
@@ -58,7 +57,7 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case tea.WindowSizeMsg:
-		h, v := docStyle.GetFrameSize()
+		h, v := m.docStyle.GetFrameSize()
 		m.width = msg.Width - h
 		m.height = msg.Height - v
 	case tea.KeyMsg:
