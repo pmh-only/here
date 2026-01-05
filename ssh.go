@@ -18,6 +18,7 @@ import (
 )
 
 const MappingContextKey = "mappings"
+const RendererContextKey = "renderer"
 
 func (here *HereServer) sshServerStart() {
 	server, err := wish.NewServer(
@@ -131,6 +132,7 @@ func (here *HereServer) onSSHForwardRequest(ctx ssh.Context, srv *ssh.Server, re
 }
 
 func (here *HereServer) onSSHClose(s ssh.Session) {
+	renderer := bubbletea.MakeRenderer(s)
 	mappings, ok := s.Context().Value(MappingContextKey).([]MappingDisplayModel)
 	if !ok || mappings == nil {
 		log.Error("failed to parse mappings on close session")
@@ -144,7 +146,7 @@ func (here *HereServer) onSSHClose(s ssh.Session) {
 	here.mappingsMu.Unlock()
 
 	if s.Context().Value("timeout") != nil {
-		fmt.Fprint(s, lipgloss.NewStyle().
+		fmt.Fprint(s, renderer.NewStyle().
 			Padding(2).
 			Width(50).
 			Background(lipgloss.Color("#212121")).

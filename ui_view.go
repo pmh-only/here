@@ -8,6 +8,8 @@ import (
 )
 
 func (m MainUIModel) View() string {
+	docStyle := m.renderer.NewStyle().Margin(1, 2)
+
 	if m.loginMode {
 		m.list.SetSize(m.width, m.height-strings.Count(m.form.View(), "\n")-2)
 		return docStyle.Render(m.list.View() + "\n\n" + m.form.View())
@@ -23,7 +25,7 @@ func (m MainUIModel) View() string {
 
 	if !m.authenticated && here.isPasswordRequired() {
 		m.list.SetSize(m.width, m.height-1)
-		login += "\n  " + lipgloss.
+		login += "\n  " + m.renderer.
 			NewStyle().
 			Background(lipgloss.Color("#212121")).
 			Foreground(lipgloss.Color("#f7f784")).

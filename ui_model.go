@@ -12,8 +12,6 @@ import (
 	"github.com/charmbracelet/ssh"
 )
 
-var docStyle = lipgloss.NewStyle().Margin(1, 2)
-
 type MainUIListItem struct {
 	title, desc string
 }
@@ -34,6 +32,7 @@ type MainUIModel struct {
 	authenticated  bool
 	passwordNeeded bool
 	session        ssh.Session
+	renderer       *lipgloss.Renderer
 	height         int
 	width          int
 }
@@ -47,7 +46,6 @@ func (m MainUIModel) Init() tea.Cmd {
 
 func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
-
 	switch msg := msg.(type) {
 	case sessionTimeoutMsg:
 		if !m.authenticated && m.passwordNeeded {
@@ -57,7 +55,7 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case tea.WindowSizeMsg:
-		h, v := docStyle.GetFrameSize()
+		h, v := m.renderer.NewStyle().Margin(1, 2).GetFrameSize()
 		m.width = msg.Width - h
 		m.height = msg.Height - v
 	case tea.KeyMsg:
@@ -72,9 +70,9 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 				if m.authenticated {
-					statusMessage := lipgloss.NewStyle().
+					statusMessage := m.renderer.NewStyle().
 						Foreground(lipgloss.Color("#42f157")).
-						Render("\nAlready authenticated.")
+						Render("Already authenticated.")
 					return m, m.list.NewStatusMessage(statusMessage)
 				}
 
@@ -87,9 +85,10 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 							Title("Login").
 							Value(&m.password).
 							EchoMode(huh.EchoModePassword).
-							Placeholder("Enter password"),
-					),
-				).WithWidth(60)
+							Placeholder("Enter password").
+							WithTheme(createFormTheme(m.renderer)),
+					).WithTheme(createFormTheme(m.renderer)),
+				).WithWidth(60).WithTheme(createFormTheme(m.renderer))
 
 				return m, m.form.Init()
 
@@ -105,9 +104,10 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 							Key("subdomain").
 							Title("Edit tunnel subdomain").
 							Value(&m.newSubdomain).
-							Placeholder("Enter new tunnel subdomain"),
-					),
-				).WithWidth(60)
+							Placeholder("Enter new tunnel subdomain").
+							WithTheme(createFormTheme(m.renderer)),
+					).WithTheme(createFormTheme(m.renderer)),
+				).WithWidth(60).WithTheme(createFormTheme(m.renderer))
 
 				return m, m.form.Init()
 
@@ -116,9 +116,9 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				mapping := m.mappings[selectedIdx]
 
 				if _, exist := here.mappings[mapping.SourceSubdomain]; mapping.IsConflict && exist {
-					statusMessage := lipgloss.NewStyle().
+					statusMessage := m.renderer.NewStyle().
 						Foreground(lipgloss.Color("#f14242ff")).
-						Render("\nthis tunnel has subdomain conflict.")
+						Render("this tunnel has subdomain conflict.")
 
 					return m, m.list.NewStatusMessage(statusMessage)
 				}
@@ -128,7 +128,9 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				items := createTunnelIndex(m.mappings)
 				listCmd := m.list.SetItems(items)
-				statusCmd := m.list.NewStatusMessage("\nPaused/Resumed " + m.mappings[selectedIdx].SourceSubdomain)
+				statusCmd := m.list.NewStatusMessage(m.renderer.NewStyle().
+					Foreground(lipgloss.Color("#42f157")).
+					Render("Paused/Resumed " + m.mappings[selectedIdx].SourceSubdomain))
 
 				return m, tea.Batch(listCmd, statusCmd)
 
@@ -136,7 +138,9 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Batch(copyToClipboard(fmt.Sprint(
 					here.getHostPrefix(),
 					m.mappings[m.list.Index()].SourceSubdomain,
-					here.getHostSuffix())), m.list.NewStatusMessage("\nCopied Tunnel URL"))
+					here.getHostSuffix())), m.list.NewStatusMessage(m.renderer.NewStyle().
+					Foreground(lipgloss.Color("#42f157")).
+					Render("Copied Tunnel URL")))
 			}
 		}
 	}
@@ -155,14 +159,14 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			expectedPassword := here.getSSHPassword()
 			if subtle.ConstantTimeCompare([]byte(password), []byte(expectedPassword)) == 1 {
 				m.authenticated = true
-				statusCmd := m.list.NewStatusMessage(lipgloss.NewStyle().
+				statusCmd := m.list.NewStatusMessage(m.renderer.NewStyle().
 					Foreground(lipgloss.Color("#42f157")).
-					Render("\nLogin successful! Session timeout removed."))
+					Render("Login successful! Session timeout removed."))
 				cmds = append(cmds, statusCmd)
 			} else {
-				statusCmd := m.list.NewStatusMessage(lipgloss.NewStyle().
+				statusCmd := m.list.NewStatusMessage(m.renderer.NewStyle().
 					Foreground(lipgloss.Color("#f14242ff")).
-					Render("\nLogin failed: incorrect password"))
+					Render("Login failed: incorrect password"))
 				cmds = append(cmds, statusCmd)
 			}
 
@@ -195,7 +199,9 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.mappings[m.editingIndex].RenameSubdomain(newSubdomain)
 				items := createTunnelIndex(m.mappings)
 				listCmd := m.list.SetItems(items)
-				statusCmd := m.list.NewStatusMessage("\nRenamed tunnel to: " + newSubdomain)
+				statusCmd := m.list.NewStatusMessage(m.renderer.NewStyle().
+					Foreground(lipgloss.Color("#42f157")).
+					Render("Renamed tunnel to: " + newSubdomain))
 				cmds = append(cmds, listCmd, statusCmd)
 			}
 

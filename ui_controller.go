@@ -8,20 +8,29 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/log"
 	"github.com/charmbracelet/ssh"
+	"github.com/charmbracelet/wish/bubbletea"
 )
 
 func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
+	renderer := bubbletea.MakeRenderer(s)
 	mappings, ok := s.Context().Value(MappingContextKey).([]MappingDisplayModel)
 	if !ok {
 		log.Error("failed to parse mappings")
 		tea.Println("oh no.. something went wrong.")
+		tea.Println("Please read the docs and rerun with -R flags")
 
 		s.Close()
 		return MainUIModel{}, nil
 	}
 
 	items := createTunnelIndex(mappings)
-	list := list.New(items, list.NewDefaultDelegate(), 0, 0)
+
+	delegate := list.NewDefaultDelegate()
+	delegate.Styles = createListItemStyles(renderer)
+
+	list := list.New(items, delegate, 0, 0)
+	list.Styles = createListStyles(renderer)
+	list.Help.Styles = createHelpStyles(renderer)
 
 	passwordNeeded := here.isPasswordRequired()
 
@@ -31,6 +40,7 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 		passwordNeeded: passwordNeeded,
 		authenticated:  false,
 		session:        s,
+		renderer:       renderer,
 	}
 
 	model.list.SetFilteringEnabled(false)
