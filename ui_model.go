@@ -12,6 +12,8 @@ import (
 	"github.com/charmbracelet/ssh"
 )
 
+var docStyle = lipgloss.NewStyle().Margin(1, 2)
+
 type MainUIListItem struct {
 	title, desc string
 }
@@ -34,8 +36,6 @@ type MainUIModel struct {
 	session        ssh.Session
 	height         int
 	width          int
-	renderer       *lipgloss.Renderer
-	docStyle       lipgloss.Style
 }
 
 func (m MainUIModel) Init() tea.Cmd {
@@ -57,7 +57,7 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case tea.WindowSizeMsg:
-		h, v := m.docStyle.GetFrameSize()
+		h, v := docStyle.GetFrameSize()
 		m.width = msg.Width - h
 		m.height = msg.Height - v
 	case tea.KeyMsg:
@@ -72,7 +72,7 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 				if m.authenticated {
-					statusMessage := m.renderer.NewStyle().
+					statusMessage := lipgloss.NewStyle().
 						Foreground(lipgloss.Color("#42f157")).
 						Render("\nAlready authenticated.")
 					return m, m.list.NewStatusMessage(statusMessage)
@@ -116,7 +116,7 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				mapping := m.mappings[selectedIdx]
 
 				if _, exist := here.mappings[mapping.SourceSubdomain]; mapping.IsConflict && exist {
-					statusMessage := m.renderer.NewStyle().
+					statusMessage := lipgloss.NewStyle().
 						Foreground(lipgloss.Color("#f14242ff")).
 						Render("\nthis tunnel has subdomain conflict.")
 
@@ -155,12 +155,12 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			expectedPassword := here.getSSHPassword()
 			if subtle.ConstantTimeCompare([]byte(password), []byte(expectedPassword)) == 1 {
 				m.authenticated = true
-				statusCmd := m.list.NewStatusMessage(m.renderer.NewStyle().
+				statusCmd := m.list.NewStatusMessage(lipgloss.NewStyle().
 					Foreground(lipgloss.Color("#42f157")).
 					Render("\nLogin successful! Session timeout removed."))
 				cmds = append(cmds, statusCmd)
 			} else {
-				statusCmd := m.list.NewStatusMessage(m.renderer.NewStyle().
+				statusCmd := m.list.NewStatusMessage(lipgloss.NewStyle().
 					Foreground(lipgloss.Color("#f14242ff")).
 					Render("\nLogin failed: incorrect password"))
 				cmds = append(cmds, statusCmd)

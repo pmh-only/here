@@ -144,8 +144,7 @@ func (here *HereServer) onSSHClose(s ssh.Session) {
 	here.mappingsMu.Unlock()
 
 	if s.Context().Value("timeout") != nil {
-		renderer := bubbletea.MakeRenderer(s)
-		fmt.Fprint(s, renderer.NewStyle().
+		fmt.Fprint(s, lipgloss.NewStyle().
 			Padding(2).
 			Width(50).
 			Background(lipgloss.Color("#212121")).
