@@ -30,6 +30,7 @@ func (here *HereServer) sshServerStart() {
 			logging.Middleware(),
 			func(next ssh.Handler) ssh.Handler {
 				return func(s ssh.Session) {
+					here.onSSHConnection(s)
 					next(s)
 					here.onSSHClose(s)
 				}
@@ -129,6 +130,48 @@ func (here *HereServer) onSSHForwardRequest(ctx ssh.Context, srv *ssh.Server, re
 	return true, gossh.Marshal(RemoteForwardSuccess{
 		assignedPort,
 	})
+}
+
+func (here *HereServer) onSSHConnection(s ssh.Session) {
+	mappings, ok := s.Context().Value(MappingContextKey).([]MappingDisplayModel)
+
+	if !ok || mappings == nil {
+		log.Error("failed to parse mappings")
+		fmt.Fprint(s, `Usage: ssh here.pmh.so [OPTION]...
+
+Expose local or internal network services via SSH remote forwarding.
+
+Options:
+  -R [NAME:]ID:HOST:PORT
+        Expose a service through here.
+
+        NAME        Optional custom subdomain name. If omitted, a random
+                    subdomain is assigned.
+        ID          Placeholder identifier. The value is ignored by the server
+                    and does not need to be unique.
+        HOST        Target hostname or IP address, resolved locally.
+        PORT        Target port on the target host.
+
+        This option may be specified multiple times to expose
+        multiple services in a single session.
+
+Examples:
+  ssh here.pmh.so -R0:localhost:8080
+        Expose a local service on port 8080.
+
+  ssh here.pmh.so -R0:localhost:8080 -R1:localhost:9000
+        Expose multiple local services.
+
+  ssh here.pmh.so -R0:service.local:80
+        Expose a service on an internal network host.
+
+  ssh here.pmh.so -R myfancy-service:0:localhost:8080
+        Expose a service using a custom subdomain.
+
+`)
+
+		s.Close()
+	}
 }
 
 func (here *HereServer) onSSHClose(s ssh.Session) {

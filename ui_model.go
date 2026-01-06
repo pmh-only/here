@@ -229,13 +229,12 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // ---
 
 type EmptyUIModel struct {
-	renderer *lipgloss.Renderer
 }
 
 func (m EmptyUIModel) Init() tea.Cmd {
-	return nil
+	return tea.Quit
 }
 
 func (m EmptyUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	return m, tea.Quit
+	return m, nil
 }

@@ -38,6 +38,5 @@ func (m MainUIModel) View() string {
 }
 
 func (m EmptyUIModel) View() string {
-	return "Oops. hereserver failed to detect tunnels.\n" +
-		"Please read the docs and retry with -R flags\n"
+	return ""
 }
