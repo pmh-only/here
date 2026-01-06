@@ -4,7 +4,8 @@ A lightweight, self-hosted reverse tunnel service that exposes your local servic
 
 ## Demo video
 
-https://github.com/user-attachments/assets/89e2cc2e-96f8-4d08-a554-ca08143c4aaf
+[Demonstration Video](https://github.com/user-attachments/assets/32ca5a56-e204-4dd9-8598-8ff80d06e50c)
+
 
 ## Usage
 
@@ -12,6 +13,7 @@ https://github.com/user-attachments/assets/89e2cc2e-96f8-4d08-a554-ca08143c4aaf
 
 ```
 ssh here.pmh.so -R0:localhost:8080
+
 ```
 
 The output will look like this:
