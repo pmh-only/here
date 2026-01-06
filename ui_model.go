@@ -237,5 +237,5 @@ func (m EmptyUIModel) Init() tea.Cmd {
 }
 
 func (m EmptyUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	return m, nil
+	return m, tea.Quit
 }

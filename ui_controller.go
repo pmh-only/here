@@ -16,11 +16,6 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 	mappings, ok := s.Context().Value(MappingContextKey).([]MappingDisplayModel)
 	if !ok || mappings == nil {
 		log.Error("failed to parse mappings")
-
-		tea.Println("Oops. hereserver failed to detect tunnels.")
-		tea.Println("Please read the docs and retry with -R flags")
-
-		s.Close()
 		return EmptyUIModel{}, nil
 	}
 
