@@ -82,15 +82,17 @@ docker run -d \
 
 ### Environment Variables
 
-| Variable                  | Default   | Description                                                                   |
-| ------------------------- | --------- | ----------------------------------------------------------------------------- |
-| `SSH_LISTEN_ADDR`         | `:2222`   | The address and port where the SSH server listens for incoming connections    |
-| `HTTP_LISTEN_ADDR`        | `:8080`   | The address and port where the HTTP reverse proxy listens                     |
-| `HTTP_HOST_SUFFIX`        | `.local`  | The domain suffix appended to generated subdomains (e.g., `.yourdomain.com`)  |
-| `HTTP_HOST_PREFIX`        | `http://` | The URL scheme prefix for generated links (`http://` or `https://`)           |
-| `SSH_PASSWORD`            | _(none)_  | Password for authenticated login mode. If not set, authentication is disabled |
-| `UNAUTHENTICATED_TIMEOUT` | `30m`     | Session timeout for anonymous connections (e.g., `5m`, `1h`, `30m`)           |
-| `DATA_PATH`               | `/data`   | Directory path where persistent data (like SSH host keys) is stored           |
+| Variable                  | Default       | Description                                                                   |
+| ------------------------- | ------------- | ----------------------------------------------------------------------------- |
+| `SSH_LISTEN_ADDR`         | `:2222`       | The address and port where the SSH server listens for incoming connections    |
+| `HTTP_LISTEN_ADDR`        | `:8080`       | The address and port where the HTTP reverse proxy listens                     |
+| `HTTP_HOST_SUFFIX`        | `.local`      | The domain suffix appended to generated subdomains (e.g., `.yourdomain.com`)  |
+| `HTTP_HOST_PREFIX`        | `http://`     | The URL scheme prefix for generated links (`http://` or `https://`)           |
+| `SSH_PASSWORD`            | _(none)_      | Password for authenticated login mode. If not set, authentication is disabled |
+| `UNAUTHENTICATED_TIMEOUT` | `30m`         | Session timeout for anonymous connections (e.g., `5m`, `1h`, `30m`)           |
+| `DATA_PATH`               | `/data`       | Directory path where persistent data (like SSH host keys) is stored           |
+| `SSH_DOMAIN`              | `here.pmh.so` | For display in usage page                                                     |
+| `SSH_CLOSE_MESSAGE`       | `true`        | For disable SSH connection close message page                                 |
 
 ### Docker Compose Example
 

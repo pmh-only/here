@@ -21,6 +21,24 @@ func (here *HereServer) getSSHAddr() string {
 	return addr
 }
 
+func (here *HereServer) getSSHDomain() string {
+	domain, ok := os.LookupEnv("SSH_DOMAIN")
+	if !ok {
+		return "here.pmh.so"
+	}
+
+	return domain
+}
+
+func (here *HereServer) isSSHCloseMessageEnabled() bool {
+	close, ok := os.LookupEnv("SSH_CLOSE_MESSAGE")
+	if !ok {
+		return true
+	}
+
+	return close == "true"
+}
+
 func (here *HereServer) getSSHPassword() string {
 	password, ok := os.LookupEnv("SSH_PASSWORD")
 	if !ok {

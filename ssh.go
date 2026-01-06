@@ -137,7 +137,7 @@ func (here *HereServer) onSSHConnection(s ssh.Session) {
 
 	if !ok || mappings == nil {
 		log.Error("failed to parse mappings")
-		fmt.Fprint(s, `Usage: ssh here.pmh.so [OPTION]...
+		fmt.Fprintf(s, `Usage: ssh %[1]s [OPTION]...
 
 Expose local or internal network services via SSH remote forwarding.
 
@@ -156,19 +156,19 @@ Options:
         multiple services in a single session.
 
 Examples:
-  ssh here.pmh.so -R0:localhost:8080
+  ssh %[1]s -R0:localhost:8080
         Expose a local service on port 8080.
 
-  ssh here.pmh.so -R0:localhost:8080 -R1:localhost:9000
+  ssh %[1]s -R0:localhost:8080 -R1:localhost:9000
         Expose multiple local services.
 
-  ssh here.pmh.so -R0:service.local:80
+  ssh %[1]s -R0:service.local:80
         Expose a service on an internal network host.
 
-  ssh here.pmh.so -R myfancy-service:0:localhost:8080
+  ssh %[1]s -R myfancy-service:0:localhost:8080
         Expose a service using a custom subdomain.
 
-`)
+`, here.getSSHDomain())
 
 		s.Close()
 	}
@@ -188,7 +188,7 @@ func (here *HereServer) onSSHClose(s ssh.Session) {
 	}
 	here.mappingsMu.Unlock()
 
-	if s.Context().Value("timeout") != nil {
+	if s.Context().Value("timeout") != nil && here.isSSHCloseMessageEnabled() {
 		fmt.Fprint(s, renderer.NewStyle().
 			Padding(2).
 			Width(50).
