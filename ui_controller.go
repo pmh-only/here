@@ -14,13 +14,14 @@ import (
 func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 	renderer := bubbletea.MakeRenderer(s)
 	mappings, ok := s.Context().Value(MappingContextKey).([]MappingDisplayModel)
-	if !ok {
+	if !ok || mappings == nil {
 		log.Error("failed to parse mappings")
-		tea.Println("oh no.. something went wrong.")
-		tea.Println("Please read the docs and rerun with -R flags")
+
+		tea.Println("Oops. hereserver failed to detect tunnels.")
+		tea.Println("Please read the docs and retry with -R flags")
 
 		s.Close()
-		return MainUIModel{}, nil
+		return EmptyUIModel{}, nil
 	}
 
 	items := createTunnelIndex(mappings)

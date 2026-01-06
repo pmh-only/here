@@ -36,3 +36,7 @@ func (m MainUIModel) View() string {
 
 	return docStyle.Render(m.list.View() + login)
 }
+
+func (m EmptyUIModel) View() string {
+	return ""
+}

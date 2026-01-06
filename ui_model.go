@@ -225,3 +225,17 @@ func (m MainUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	return m, tea.Batch(cmds...)
 }
+
+// ---
+
+type EmptyUIModel struct {
+	renderer *lipgloss.Renderer
+}
+
+func (m EmptyUIModel) Init() tea.Cmd {
+	return nil
+}
+
+func (m EmptyUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	return m, nil
+}
