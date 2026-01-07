@@ -179,6 +179,7 @@ func (here *HereServer) onSSHClose(s ssh.Session) {
 	mappings, ok := s.Context().Value(MappingContextKey).([]MappingDisplayModel)
 	if !ok || mappings == nil {
 		log.Error("failed to parse mappings on close session")
+		s.Close()
 		return
 	}
 
@@ -202,6 +203,7 @@ In the meantime, you are welcome to self-host the server to use it with an unlim
 
 thanks. -p`,
 				here.getUnauthenticatedTimeout()))+"\n")
-		return
 	}
+
+	s.Close()
 }
